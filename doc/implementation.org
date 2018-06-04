@@ -1,0 +1,42 @@
+* Thoughts & Research
+** Initial thoughts
+I've been experimenting a lot with various rate limiting algorithms, the solutions all seem to have similar common
+issues with clock resolution, burstiness and timing attacks. Some have memory issues and others have
+malleability issues. Implementations across Golang are various, plenty and half of them are either dead projects
+or too complex for the nature of the problem. The two most promising algorithms I've seen so far are the leaky bucket
+and the token bucket ones. Sliding window and Sliding log are decent but I like the straightforwardness of token buckets.
+
+My implementation was based on Go channels but I've since decided to replace this with a pre-existing library and build
+on top of it if needed.
+*** A few questions
+- Who routes the request to the correct node in the network/cluster
+- This is an enforcer or will it act as a reverse proxy, modifying a few headers with limit data
+and let someone else handle it.
+- Are we policing or shaping traffic? In other words, will we simply drop the request with a 429 response
+or will we queue it up and send when the congestion level drops.
+
+* The implementation
+There are three main points of interest that should be considered in this implementation.
+** Deployment and how it fits in the architecture
+I have two thoughts about this, the first being where does the rate limiter sits in the architecture.
+The rate limiter can be deployed as the client-facing server sitting infront of another reverse proxy. Or it
+can be deployed as a [sidecar](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). This will
+raise the issue of horizontal scalability and communication between multiple instances for applying a global limit.
+** Resilence of the service between outages and redeployments
+I want the service to persist the current state of limitations applied on each bucket that's being throttled. This way
+services can be shutdown and restarted without fear of allowing abusive clients access to a resource they were being limited
+or a resource being overloaded when it's recovering.
+** Scalability of the service depending on the architecture used
+
+** MVP
+What I'm considering right now is setting a few assumptions and moving forward
+from there. In fact if I could make the rate limiting logic malleable that'd be great but let's not
+get ahead of ourselves, yet.
+
+*** Initial implementation [2/3]
+I'd like to satisify these requirements
+
+- [X] Implement a reverse proxy that forwards the request to a host
+- [ ] Limit requests to single paths by a 100req/m 
+- [X] Configure the target host
+

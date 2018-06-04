@@ -1,0 +1,26 @@
+* Overview
+Design and implement a basic service for rate limiting web requests. We have a network of instances that are each 
+handling web requests. We want to build in a limiter that would control access for a given resource to 100 requests/minute per path 
+across the entire network; not just 100 msgs/minute/node. 
+Feel free to use other technologies to help with coordination, persistence, etc.
+
+** Hard requirements
+- Implemented in Go
+- Includes a README with instructions
+- Documentation for design decisions, deployment and future work and scalability
+
+** Goals of the service
+- Minimally impact the response times for a web request
+- Enforce a limit of 100/msgs per minute
+- Requests can come from multiple sources
+- Limits don't have to be strictly enforced, it is ok to get 105 msgs before the limits kick in
+
+** You should focus on
+- How you are approaching the problem (e.g. how strictly the limits are counted and enforced).
+- What is the impact on web requests? What steps can be taken to minimize that impact?
+- How will external service communicate with this service?
+- Is there any persistence, is any needed? Evaluation criteria
+- Documentation
+- Design decisions, feel free to talk it over in slack and then add to the README
+- Concise code with clear separations of concerns
+- Testing
