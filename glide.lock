@@ -1,6 +1,8 @@
-hash: 7414a9190b6cd8ff3e096eeae8341a3ff9a6fdfb67db7d5490f2a5c707d225f9
-updated: 2018-06-04T19:30:56.327392593+02:00
+hash: ccedb91beacab35a55e0a9251cb8fa7023dae51ff5da04a591e9145facd9ad54
+updated: 2018-06-06T00:06:11.788459767+02:00
 imports:
 - name: github.com/juju/ratelimit
   version: 59fac5042749a5afb9af70e813da1dd5474f0167
+- name: github.com/stretchr/testify
+  version: 12b6f73e6084dad08a7c6e575284b177ecafbc71
 testImports: []

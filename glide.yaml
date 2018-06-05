@@ -2,3 +2,5 @@ package: rlimiter
 import:
 - package: github.com/juju/ratelimit
   version: ~1.0.1
+- package: github.com/stretchr/testify
+  version: ~1.2.1
