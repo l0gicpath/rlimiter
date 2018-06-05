@@ -1,2 +1,4 @@
 package: rlimiter
-import: []
+import:
+- package: github.com/juju/ratelimit
+  version: ~1.0.1
