@@ -2,20 +2,38 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	rl "github.com/juju/ratelimit"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"time"
 )
 
-const (
-	defaultPort     = "2400"
-	portUsageHelp   = "rate limiter reverse proxy port"
-	defaultTarget   = "http://0.0.0.0:80"
-	targetUsageHelp = "server to limit access to"
-)
+type Buckets map[string]*rl.Bucket
+
+var buckets Buckets = make(Buckets)
+
+func (b Buckets) GetOrCreate(key string) (bucket *rl.Bucket) {
+	bucket, ok := b[key]
+	if !ok {
+		bucket = rl.NewBucketWithQuantum(60*time.Second, config.ratePerMinute, config.ratePerMinute)
+		b[key] = bucket
+	}
+
+	return
+}
+
+// Config carries command line configurations
+type Config struct {
+	port          string
+	target        string
+	ip            string
+	ratePerMinute int64
+}
 
 // Proxy is an HTTP handler than sets up the reverse proxy
 type Proxy struct {
@@ -26,8 +44,16 @@ type Proxy struct {
 // ServeHTTP will log the request, create a rate limited transport
 // and hand the flow over to the reverse proxy
 func (lp *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("X-R-Limit-Proxy", "Rlimit-0.1.0")
-	lp.reverseProx.ServeHTTP(w, r)
+	key := r.RequestURI
+	if key == "" {
+		key = "/"
+	}
+	waitUntil := buckets.GetOrCreate(r.RequestURI).Take(1)
+	if waitUntil > 0 {
+		http.Error(w, fmt.Sprintf("Too many connections, try again in %v", waitUntil), http.StatusTooManyRequests)
+	} else {
+		lp.reverseProx.ServeHTTP(w, r)
+	}
 }
 
 // NewProxy accepts a target string, that should be a valid URL that
@@ -58,24 +84,51 @@ func NewProxy(target string) *Proxy {
 		MaxIdleConns:        240,
 		IdleConnTimeout:     120 * time.Second,
 		TLSHandshakeTimeout: 30 * time.Second,
-		DialContext:         dialer.DialContext,
+		Dial:                dialer.Dial,
 	}
 
 	return proxy
 }
 
+const (
+	ipUsageHelp            = "IP address for rlimiter to bind to"
+	portUsageHelp          = "Port number for rlimiter to listen on"
+	targetUsageHelp        = "Address of server we are protecting"
+	ratePerMinuteUsageHelp = "Rate of connections allowed per minute"
+)
+
+var config *Config
+var defaultConfig *Config = &Config{
+	port:          "2400",
+	target:        "http://0.0.0.0:80",
+	ip:            "127.0.0.1",
+	ratePerMinute: 100,
+}
+
+func usage() {
+	fmt.Fprintf(os.Stderr, "Usage: %s -target=TARGET [other options]\n", os.Args[0])
+	flag.PrintDefaults()
+}
+
 func main() {
-	port := flag.String("port", defaultPort, portUsageHelp)
-	target := flag.String("target", defaultTarget, targetUsageHelp)
+	config = &Config{}
+
+	flag.StringVar(&config.port, "port", defaultConfig.port, portUsageHelp)
+	flag.StringVar(&config.target, "target", defaultConfig.target, targetUsageHelp)
+	flag.StringVar(&config.ip, "ip", defaultConfig.ip, ipUsageHelp)
+	flag.Int64Var(&config.ratePerMinute, "rpm", defaultConfig.ratePerMinute, ratePerMinuteUsageHelp)
+
+	flag.Usage = usage
+
 	flag.Parse()
 
-	proxy := NewProxy(*target)
+	proxy := NewProxy(config.target)
 	server := &http.Server{
 		Handler: proxy,
-		Addr:    "0.0.0.0:" + *port,
+		Addr:    config.ip + ":" + config.port,
 	}
 
-	log.Printf("Starting http rate limiter on port 0.0.0.0:%s", *port)
-	log.Printf("Limiting access to %s", *target)
+	log.Printf("Starting http rate limiter on port %s:%s", config.ip, config.port)
+	log.Printf("Limiting access to %s by %v reqs/m", config.target, config.ratePerMinute)
 	log.Fatal(server.ListenAndServe())
 }
