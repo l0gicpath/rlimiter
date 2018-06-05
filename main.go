@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	rl "github.com/juju/ratelimit"
 	"log"
@@ -9,7 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"os"
+	"rlimiter/conf"
 	"time"
 )
 
@@ -20,19 +19,11 @@ var buckets Buckets = make(Buckets)
 func (b Buckets) GetOrCreate(key string) (bucket *rl.Bucket) {
 	bucket, ok := b[key]
 	if !ok {
-		bucket = rl.NewBucketWithQuantum(60*time.Second, config.ratePerMinute, config.ratePerMinute)
+		bucket = rl.NewBucketWithQuantum(60*time.Second, conf.Cfg.RPM, conf.Cfg.RPM)
 		b[key] = bucket
 	}
 
 	return
-}
-
-// Config carries command line configurations
-type Config struct {
-	port          string
-	target        string
-	ip            string
-	ratePerMinute int64
 }
 
 // Proxy is an HTTP handler than sets up the reverse proxy
@@ -90,45 +81,16 @@ func NewProxy(target string) *Proxy {
 	return proxy
 }
 
-const (
-	ipUsageHelp            = "IP address for rlimiter to bind to"
-	portUsageHelp          = "Port number for rlimiter to listen on"
-	targetUsageHelp        = "Address of server we are protecting"
-	ratePerMinuteUsageHelp = "Rate of connections allowed per minute"
-)
-
-var config *Config
-var defaultConfig *Config = &Config{
-	port:          "2400",
-	target:        "http://0.0.0.0:80",
-	ip:            "127.0.0.1",
-	ratePerMinute: 100,
-}
-
-func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: %s -target=TARGET [other options]\n", os.Args[0])
-	flag.PrintDefaults()
-}
-
 func main() {
-	config = &Config{}
+	conf.CommandArgs()
 
-	flag.StringVar(&config.port, "port", defaultConfig.port, portUsageHelp)
-	flag.StringVar(&config.target, "target", defaultConfig.target, targetUsageHelp)
-	flag.StringVar(&config.ip, "ip", defaultConfig.ip, ipUsageHelp)
-	flag.Int64Var(&config.ratePerMinute, "rpm", defaultConfig.ratePerMinute, ratePerMinuteUsageHelp)
-
-	flag.Usage = usage
-
-	flag.Parse()
-
-	proxy := NewProxy(config.target)
+	proxy := NewProxy(conf.Cfg.Target)
 	server := &http.Server{
 		Handler: proxy,
-		Addr:    config.ip + ":" + config.port,
+		Addr:    conf.Cfg.Addr(),
 	}
 
-	log.Printf("Starting http rate limiter on port %s:%s", config.ip, config.port)
-	log.Printf("Limiting access to %s by %v reqs/m", config.target, config.ratePerMinute)
+	log.Printf("Starting rlimiter... binding to: %s", conf.Cfg.Addr())
+	log.Printf("Limiting access to %s by %v reqs/m", conf.Cfg.Target, conf.Cfg.RPM)
 	log.Fatal(server.ListenAndServe())
 }
