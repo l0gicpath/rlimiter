@@ -33,10 +33,10 @@ What I'm considering right now is setting a few assumptions and moving forward
 from there. In fact if I could make the rate limiting logic malleable that'd be great but let's not
 get ahead of ourselves, yet.
 
-*** Initial implementation [2/3]
+*** Initial implementation [3/3]
 I'd like to satisify these requirements
 
 - [X] Implement a reverse proxy that forwards the request to a host
-- [ ] Limit requests to single paths by a 100req/m 
+- [X] Limit requests to single paths by a 100req/m 
 - [X] Configure the target host
 
