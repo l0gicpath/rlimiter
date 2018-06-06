@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"rlimiter/conf"
+	"strconv"
 	"time"
 )
 
@@ -36,13 +37,17 @@ type Proxy struct {
 // ServeHTTP will log the request, create a rate limited transport
 // and hand the flow over to the reverse proxy
 func (lp *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-R-Limit-Limit", strconv.Itoa(int(conf.Cfg.RPM)))
+
 	key := r.RequestURI
 	if key == "" {
 		key = "/"
 	}
+
 	waitUntil := buckets.GetOrCreate(r.RequestURI).Take(1)
 	if waitUntil > 0 {
-		http.Error(w, fmt.Sprintf("Too many connections, try again in %v", waitUntil), http.StatusTooManyRequests)
+		w.Header().Set("X-R-Limit-Wait", waitUntil.String())
+		http.Error(w, "Too many connections, try again later", http.StatusTooManyRequests)
 	} else {
 		lp.reverseProx.ServeHTTP(w, r)
 	}
