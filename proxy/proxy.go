@@ -26,7 +26,7 @@ import (
 	"time"
 )
 
-// Proxy is an HTTP handler than sets up the reverse proxy
+// Proxy is an HTTP handler than sets up the reverse proxy and catches-all HTTP traffic
 type Proxy struct {
 	target      *url.URL
 	reverseProx *httputil.ReverseProxy
@@ -85,11 +85,15 @@ func newProxy(target string) *Proxy {
 	return proxy
 }
 
-// RateLimitingServer holds two pieces, the HTTP server component that accepts HTTP requests
+// RateLimitingServer holds the HTTP server, the abstraction is in place because later
+// it will encapsulate the logic for making the service a daemon and for gracefull
+// shutdown.
 type RateLimitingServer struct {
 	HTTP *http.Server
 }
 
+// Create a new RateLimitingService accepting the target to be protected and the
+// address on which the HTTP server would bind to.
 func New(target, addr string) *RateLimitingServer {
 	prox := newProxy(target)
 	serv := &http.Server{
