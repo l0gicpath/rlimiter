@@ -1,5 +1,7 @@
 package conf
 
+// Env type represents the environment in which the service is
+// running inside.
 type Env int
 
 const (

@@ -65,12 +65,17 @@ func NewProxy(target string) *Proxy {
 		reverseProx: httputil.NewSingleHostReverseProxy(url),
 	}
 
+	// Custom dialer and custom Transport to fix this random context cancelled I've been
+	// receiving. Seems I'm not the only one, initially I tried implementing this using
+	// DialContext but it still failed. Seems like a scope issue with context being
+	// cancelled too early? Or this:
+	// https://groups.google.com/forum/#!msg/golang-nuts/oiBBZfUb2hM/9S_JB6g2EAAJ
+	// Either way, it's quite annoying, so I'm keeping that for now.
 	dialer := net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
 		DualStack: true,
 	}
-
 	proxy.reverseProx.Transport = &http.Transport{
 		Proxy:               http.ProxyFromEnvironment,
 		MaxIdleConns:        240,
