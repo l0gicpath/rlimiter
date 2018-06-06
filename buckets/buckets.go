@@ -1,3 +1,6 @@
+/*
+Buckets contains a wrapping implementation of tokenbuckets.
+*/
 package buckets
 
 import (
@@ -10,6 +13,13 @@ type Buckets map[string]*rl.Bucket
 
 var PathBuckets Buckets = make(Buckets)
 
+// GetOrCreate will create a new bucket with the given key if it doesn't exist
+// or return an existing one.
+//
+// Configuration for new buckets are taken from the global configuration variable
+// conf.Cfg and the only configuration required is RPM (Requests Per Minute)
+//
+// Returns a bucket pointer
 func (b Buckets) GetOrCreate(key string) (bucket *rl.Bucket) {
 	bucket, ok := b[key]
 

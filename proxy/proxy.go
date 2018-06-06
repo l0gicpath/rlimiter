@@ -1,3 +1,17 @@
+/*
+Proxy package contains the implementation of a catch-all HTTP handler that is rate limited.
+The handler implementation acts as a gatekeeper to the underlaying protected service which
+is in concept represented by the SingleHostReverseProxy instance.
+
+If the limit is not exceeded then the request is passed to the reverse proxy but if the
+limit is exceeded the request is dropped with a 429 HTTP status code.
+
+Headers are set for each limit-exceeding request:
+	- X-R-Limit-Wait		This gives the calling client an indicator to how long it should wait before a re-try
+
+Headers that are set for each response:
+	- X-R-Limit-Limit		This informs the client of how big is the current limit
+*/
 package proxy
 
 import (
