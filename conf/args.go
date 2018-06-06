@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -14,23 +15,27 @@ const (
 	usageBanner    = "Usage: %s -target=TARGET [-option=value...]\nOptions:\n"
 )
 
-func usage() {
+func DisplayUsage() {
 	fmt.Fprintf(os.Stderr, usageBanner, os.Args[0])
 	flag.PrintDefaults()
 }
 
-func CommandArgs() {
+func setupFlags() {
 	flag.IntVar(&Cfg.Port, "port", defaultCfg.Port, portArgUsage)
 	flag.StringVar(&Cfg.IP, "ip", defaultCfg.IP, ipArgUsage)
 	flag.StringVar(&Cfg.Target, "target", defaultCfg.Target, targetArgUsage)
 	flag.Int64Var(&Cfg.RPM, "rpm", defaultCfg.RPM, rpmArgUsage)
+}
 
-	flag.Usage = usage
+func CommandLineArgs() error {
+	setupFlags()
+
+	flag.Usage = DisplayUsage
 	flag.Parse()
 
 	if Cfg.Target == "" {
-		fmt.Println("Please specify a -target option")
-		usage()
-		os.Exit(1)
+		return errors.New("Please specify a -target option")
 	}
+
+	return nil
 }

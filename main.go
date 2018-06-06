@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"rlimiter/conf"
 	"time"
 )
@@ -82,7 +83,12 @@ func NewProxy(target string) *Proxy {
 }
 
 func main() {
-	conf.CommandArgs()
+	err := conf.CommandLineArgs()
+	if err != nil {
+		fmt.Println(err)
+		conf.DisplayUsage()
+		os.Exit(1)
+	}
 
 	proxy := NewProxy(conf.Cfg.Target)
 	server := &http.Server{
