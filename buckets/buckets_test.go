@@ -1,8 +1,8 @@
 package buckets
 
 import (
+	"github.com/l0gicpath/rlimiter/conf"
 	"github.com/stretchr/testify/assert"
-	"rlimiter/conf"
 	"testing"
 )
 

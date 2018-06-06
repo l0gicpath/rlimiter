@@ -15,13 +15,13 @@ Headers that are set for each response:
 package proxy
 
 import (
+	"github.com/l0gicpath/rlimiter/buckets"
+	"github.com/l0gicpath/rlimiter/conf"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"rlimiter/buckets"
-	"rlimiter/conf"
 	"strconv"
 	"time"
 )

@@ -5,7 +5,7 @@ package buckets
 
 import (
 	rl "github.com/juju/ratelimit"
-	"rlimiter/conf"
+	"github.com/l0gicpath/rlimiter/conf"
 	"time"
 )
 

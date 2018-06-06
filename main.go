@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/l0gicpath/rlimiter/conf"
+	"github.com/l0gicpath/rlimiter/proxy"
 	"log"
 	"os"
-	"rlimiter/conf"
-	"rlimiter/proxy"
 )
 
 func main() {
