@@ -16,27 +16,90 @@ and let someone else handle it.
 or will we queue it up and send when the congestion level drops.
 
 * The implementation
-There are three main points of interest that should be considered in this implementation.
-** Deployment and how it fits in the architecture
-I have two thoughts about this, the first being where does the rate limiter sits in the architecture.
-The rate limiter can be deployed as the client-facing server sitting infront of another reverse proxy. Or it
-can be deployed as a [sidecar](https://docs.microsoft.com/en-us/azure/architecture/patterns/sidecar). This will
-raise the issue of horizontal scalability and communication between multiple instances for applying a global limit.
-** Resilence of the service between outages and redeployments
-I want the service to persist the current state of limitations applied on each bucket that's being throttled. This way
-services can be shutdown and restarted without fear of allowing abusive clients access to a resource they were being limited
-or a resource being overloaded when it's recovering.
-** Scalability of the service depending on the architecture used
+The implementation had some high hopes but I'm pulling the plug on this since I had the intention to finish it
+June 5. Will continue the development further in the up coming weeks but for now, the basic vision is realized.
 
-** MVP
-What I'm considering right now is setting a few assumptions and moving forward
-from there. In fact if I could make the rate limiting logic malleable that'd be great but let's not
-get ahead of ourselves, yet.
+The initial idea was to be able to deploy this as sidecars with their respective services which they protect.
+This still holds true however there's no coordination between the multiple instances, some might see this as
+an advantage (sharing nothing approach). I think it depends on what you need.
 
-*** Initial implementation [3/3]
-I'd like to satisify these requirements
+For now the service works as expected, it's a rate limiting implementation running token buckets under the
+hood. The implementation is essentially simple, I used the SingleHostReverseProxy server from httputil, thank you
+Go. Wrapped that in an HTTP handling endpoint that captures all HTTP traffic and decides whether this traffic
+should go forward or be dropped.
+If the traffic should go forward, it's passed over to the reverse proxy instance currently in memory.
 
-- [X] Implement a reverse proxy that forwards the request to a host
-- [X] Limit requests to single paths by a 100req/m 
-- [X] Configure the target host
+** Drawbacks and limitations
+*** First impression
+The first impression of the service is the lack of persistence for the existing applied limits on each bucket.
+Buckets represents an entity that we limit against, in this case a URI. If the service is restarted, the current
+active and in-progress limits are wiped out since they are not persisted anywhere.
+
+This can be easily resolved with using something like RocksDB or Redis (With Redis key expiry feature) which
+will make life easier between restarts and downtime.
+
+*** Requests are dropped
+Requests when they hit a limit will get dropped, this is a design decision but can change in which requests
+can be queued up. This will introduce a priority queuing issue which has to be addressed.
+In other words, which should we take from, the current live requests or the queued ones to be sent to the
+protected service. This can be solved with the Redis key expiry feature in which keys that exceed a certain
+duration will die out. That way, if a request (A) came in and was queued, no window of opportunity was open for
+(A) to be sent over to the protected service, after a while (A) will die.
+
+This will solve the issue of a growing queue, which can be a memory constraint although a quick research shows
+that some implementations can only eat up to 20-50mb of RAM. So your milage might vary.
+
+This is okay for now since the service is designed for API clients, in other words. Consumers that will
+not expect an in-flight request to be answered before a time-out occurs and breaks the UX (Like browsers).
+With API clients, their implementation should cater to the fact that limits can be applied and if applied
+they need to seek out **"X-R-Limit-Wait"** header to know when should be the next time they re-try.
+
+*** Caching responses
+This is a nice-to-have. We might not actually need to hit the service we protect all that often. If we introduce
+a caching layer. Again these are all matters of taste and need. Requests of specific nature can 
+
+** Interface and Usage
+The service has a decent CLI with a small surface area. The single required option to be passed is **'-target'**.
+Simply start the service and pass it a target and you're golden. The default limit on requests is 100/minute.
+
+I initially wanted to integrate dotenv support which I think is quite a joy to work with specially in containerized
+environments, but perhaps another time. Should be easy, since the conf package is intended to be designed in a way
+that dotenv will load configurations but configurations can be overriden by command line options.
+
+At least that was my intention
+
+** Deployment and Tests
+The deployment will not differ from any other standard Golang deployment process. Either distribute pre-built
+binaries cross-compiled depending on which type of machine is used for the build and which is used for the server
+platform.
+
+It has no dependencies on external services, no databases required.
+
+Testing status is not dismal but can be better, the code landscape is small to begin with which makes it easy to go
+through and also easy to test.
+
+The current test suite includes tests for the functions I wanted to verify they're always working because they're likely
+easily to break.
+
+*** Limitations of the current test suite
+Quite a few but some of my biggest annoyance is not investing more time verifying that the Bucket returned from Buckets.GetOrCreate
+is verified to be the same bucket we created earlier.
+
+And the custom X-R-Limit-* headers we set, I need to verify that those always work as expected otherwise they could
+seriously break client implementations.
+
+** Moving forward
+I'm never quite satisifed with the final outcome of a piece of software I write and that's part of the process. There's
+quite a lot that I would like to add to this, but for now. It works as intended. At least to the limits of my
+testing ability. I've stress tested this. 
+
+*** Partial implementations
+There's one partial implementation that I decided to add early on
+for when I add dotenv support, that's the multiple environments
+support. This is incomplete.
+
+** Process
+I don't normally work off the master branch however for brevity I've
+done exactly that. The development process is generally outlined in
+the README file under _Development_ section.
 
