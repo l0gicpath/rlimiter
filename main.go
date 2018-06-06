@@ -34,8 +34,11 @@ type Proxy struct {
 	reverseProx *httputil.ReverseProxy
 }
 
-// ServeHTTP will log the request, create a rate limited transport
-// and hand the flow over to the reverse proxy
+// We add limit information to X-R-Limit-Limit header. Get an existing bucket
+// or create one based on the request path, then we take a token out of it.
+// If we have enough tokens, we'll pass this over to the reverse proxy otherwise
+// we'll give back a 429 http status and set the X-R-Limit-Wait header to the
+// time the client has to wait before making a new request.
 func (lp *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-R-Limit-Limit", strconv.Itoa(int(conf.Cfg.RPM)))
 

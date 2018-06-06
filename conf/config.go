@@ -4,10 +4,18 @@ import "fmt"
 
 // Config carries command line configurations
 type Config struct {
-	Port   int
+	// Port number the service listens to
+	Port int
+
+	// Target URI the service will be protecting
 	Target string
-	IP     string
-	RPM    int64
+
+	// IP address the service needs to bind to
+	IP string
+
+	// Requests per minute is how many requests can the service
+	// accept per minute
+	RPM int64
 }
 
 // Addr is a convenience function that generates
