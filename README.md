@@ -1,5 +1,7 @@
 # Rate Limiter
 
+[![Maintainability](https://api.codeclimate.com/v1/badges/a99a88d28ad37a79dbf6/maintainability)](https://codeclimate.com/github/l0gicpath/rlimiter)
+
 A request rate limiter that sits between a consumer and a cluster of web nodes limiting
 the request rate across the entire cluster per request PATH.
 
